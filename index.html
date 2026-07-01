@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nmap Cutter</title>
+    <style>
+        /* 1. BACKGROUND VIDEO UTAMA (FULL SCREEN) */
+        .bg-video-full {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            z-index: -100;
+            object-fit: cover;
+            background-color: #0c0c0e;
+        }
+
+        .bg-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: -99;
+        }
+
+        body {
+            font-family: sans-serif;
+            color: #e0e0e0;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        
+        /* ANIMASI RGB NGALIR BARENG (SINKRON) */
+        @keyframes rgbNgalirBareng {
+            0% { border-color: #0074d9; }
+            33% { border-color: #7fdbff; }
+            66% { border-color: #001f3f; }
+            100% { border-color: #0074d9; }
+        }
+
+        /* GARIS SUPER TIPIS 1PX */
+        .garis-tipis {
+            border: 1px solid #0074d9;
+            animation: rgbNgalirBareng 6s linear infinite;
+            box-sizing: border-box;
+        }
+
+        /* Container Utama */
+        .container {
+            width: 100%;
+            max-width: 450px;
+            background-color: rgba(22, 22, 26, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.7);
+        }
+        
+        /* 2. STRUKTUR BARU: KOTAK PERSEGI DENGAN BACKGROUND VIDEO */
+        .video-header-box {
+            position: relative;
+            width: 100%;
+            height: 130px;
+            background-color: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Mengunci video agar menjadi latar belakang dalam kotak persegi */
+        .video-header-box video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        /* Lapisan teks/konten di dalam kotak persegi (di depan video background) */
+        .video-header-content {
+            position: relative;
+            z-index: 2; /* Naik ke atas video */
+            text-align: center;
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3); /* Overlay tipis khusus kotak persegi */
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        h2 { color: #7fdbff; text-align: center; margin-top: 0; font-size: 22px; font-weight: bold; }
+        
+        /* Select Menu Sisi Melingkar + Garis Tipis */
+        .select-box {
+            width: 100%;
+            padding: 12px;
+            background-color: #16161a;
+            color: #7fdbff;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            outline: none;
+            cursor: pointer;
+            display: block;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .select-box option {
+            background-color: #16161a;
+            color: #e0e0e0;
+        }
+
+        /* Area Upload */
+        .upload-area {
+            padding: 25px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            background-color: #16161a;
+        }
+        .upload-area p { margin: 0; color: #7fdbff; font-weight: bold; font-size: 14px; }
+        input[type="file"] { display: none; }
+        
+        /* Tombol Utama */
+        button {
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 12px;
+            color: #ffffff;
+            background: linear-gradient(45deg, #001f3f, #0074d9, #002244, #001f3f);
+            background-size: 300% 300%;
+            box-shadow: 0 4px 15px rgba(0, 116, 217, 0.2);
+            box-sizing: border-box;
+        }
+        
+        .btn-terminal {
+            display: none;
+            background: #222;
+            color: #7fdbff;
+        }
+        
+        .status-msg { margin: 15px 0; text-align: center; font-weight: bold; font-size: 14px; }
+        .error { color: #ff4136; }
+        .success { color: #2ecc40; }
+        
+        .terminal-box {
+            display: none;
+            margin-top: 5px;
+        }
+        
+        /* Kotak Hasil Terminal */
+        textarea {
+            width: 100%;
+            height: 220px;
+            background-color: #0c0c0e;
+            color: #7fdbff;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+            resize: none;
+            box-sizing: border-box;
+            padding: 12px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<video autoplay loop muted playsinline class="bg-video-full">
+    <source src="bg.mp4" type="video/mp4">
+</video>
+<div class="bg-overlay"></div>
+
+<div class="container garis-tipis">
+    
+    <div class="video-header-box garis-tipis">
+        <video autoplay loop muted playsinline>
+            <source src="video.mp4" type="video/mp4">
+        </video>
+        <div class="video-header-content">
+            </div>
+    </div>
+
+    <h2>Nmap Cutter</h2>
+    
+    <select class="select-box garis-tipis" id="menuMode" onchange="ubahMode()">
+        <option value="ipport">IP & PORT</option>
+        <option value="domain">DOMAIN</option>
+    </select>
+
+    <div class="upload-area garis-tipis" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <p id="uploadText">Upload file log Nmap (.txt)</p>
+        <input type="file" id="fileInput" accept=".txt">
+    </div>
+
+    <button class="btn-proses" onclick="ekstrakData()">Proses & Ekstrak</button>
+    <button class="btn-terminal garis-tipis" id="btnTerminal" onclick="toggleTerminal()">Lihat Terminal</button>
+
+    <div id="status" class="status-msg"></div>
+
+    <div class="terminal-box" id="areaTerminal">
+        <h3 id="judulOutput" style="color: #7fdbff; margin-bottom: 5px; margin-top: 0; font-size: 14px;">Hasil IP & Port</h3>
+        <textarea id="outputHasil" class="garis-tipis" placeholder="Menunggu proses..." readonly></textarea>
+    </div>
+</div>
+
+<script>
+    let fileContent = "";
+
+    function ubahMode() {
+        const mode = document.getElementById('menuMode').value;
+        document.getElementById('outputHasil').value = "";
+        document.getElementById('status').innerText = "";
+        document.getElementById('judulOutput').innerText = mode === 'ipport' ? "Hasil IP & Port" : "Hasil Domain";
+        document.getElementById('areaTerminal').style.display = "none";
+        document.getElementById('btnTerminal').style.display = "none";
+    }
+
+    function toggleTerminal() {
+        const terminal = document.getElementById('areaTerminal');
+        const btn = document.getElementById('btnTerminal');
+        if (terminal.style.display === "block") {
+            terminal.style.display = "none";
+            btn.innerText = "Lihat Terminal";
+        } else {
+            terminal.style.display = "block";
+            btn.innerText = "Sembunyikan Terminal";
+        }
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        document.getElementById('uploadText').innerText = `File: ${file.name}`;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) { 
+            fileContent = e.target.result; 
+            document.getElementById('status').className = "status-msg success";
+            document.getElementById('status').innerText = "File log berhasil dimuat!";
+        };
+        reader.readAsText(file);
+    });
+
+    function ekstrakData() {
+        const statusDiv = document.getElementById('status');
+        const outputBox = document.getElementById('outputHasil');
+        const mode = document.getElementById('menuMode').value;
+        const btnTerminal = document.getElementById('btnTerminal');
+
+        if (!fileContent) {
+            statusDiv.className = "status-msg error";
+            statusDiv.innerText = "Gagal: Belum upload file!";
+            return;
+        }
+
+        if (mode === 'ipport') {
+            const regexIP = /\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/g;
+            const ipUnik = [...new Set(fileContent.match(regexIP) || [])].filter(ip => !ip.startsWith('0.') && !ip.startsWith('127.'));
+
+            const regexPortAlternatif = /(\d+)\/tcp\s+open|port\s+(\d+)\/tcp/gi;
+            let match, semuaPort = [];
+            while ((match = regexPortAlternatif.exec(fileContent)) !== null) {
+                let nomorPort = match[1] || match[2];
+                if (nomorPort) semuaPort.push(nomorPort);
+            }
+            const portUnik = [...new Set(semuaPort)].sort((a, b) => a - b);
+
+            if (ipUnik.length === 0 && portUnik.length === 0) {
+                statusDiv.className = "status-msg error";
+                statusDiv.innerText = "Gagal: Tidak ditemukan pola URL/IP di dalam file.";
+                btnTerminal.style.display = "none";
+                return;
+            }
+
+            outputBox.value = "=== IP ADDRESS MURNI ===\n" + ipUnik.join('\n') + "\n\n=== PORT OPEN MURNI ===\n" + portUnik.join('\n');
+            statusDiv.className = "status-msg success";
+            statusDiv.innerText = `Sukses! ${ipUnik.length} IP & ${portUnik.length} Port didapat.`;
+            btnTerminal.style.display = "block";
+
+        } else {
+            const regexDomain = /(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}/g;
+            const domainUnik = [...new Set(fileContent.match(regexDomain) || [])].filter(d => {
+                const sampah = ['nmap.org', 'localhost', 'images.google.com', 'google.com'];
+                const polaAngka = !isNaN(d.replace(/\./g, ''));
+                return !sampah.includes(d.toLowerCase()) && !polaAngka;
+            });
+
+            if (domainUnik.length === 0) {
+                statusDiv.className = "status-msg error";
+                statusDiv.innerText = "Gagal: Tidak ada domain murni di log ini.";
+                btnTerminal.style.display = "none";
+                return;
+            }
+
+            outputBox.value = domainUnik.join('\n');
+            statusDiv.className = "status-msg success";
+            statusDiv.innerText = `Sukses! ${domainUnik.length} Domain didapat.`;
+            btnTerminal.style.display = "block";
+        }
+    }
+</script>
+
+</body>
+</html>
